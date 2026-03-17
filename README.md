@@ -25,6 +25,152 @@ Language:       Python 3.8+
 - ✅ **Well-documented**: 2500+ lines of detailed documentation
 
 ---
+---
+
+## 📦 Dataset & Model Setup (Required)
+
+Due to large file sizes, the dataset and trained model are **not included in this repository**.
+They are hosted externally for easy access and faster downloads.
+
+---
+
+### 🔗 Download Files
+
+👉 **Google Drive Link:**
+https://drive.google.com/drive/folders/1xSuk70NEsU8-nQt1gIz4JCtOHM0kitO6?usp=sharing
+
+---
+
+### 📁 Files Included in Drive
+
+The Drive folder contains:
+
+* `data/` → Complete dataset
+
+  * `oasis/` → Raw MRI data (.img, .hdr)
+  * `processed/` → Preprocessed PNG images (used for training)
+
+* `model/` → Trained model
+
+  * `model.pth` → PyTorch model file
+
+* `heatmaps/` *(optional)* → Sample Grad-CAM outputs for visualization
+
+---
+
+### ⚙️ Setup Instructions
+
+Follow these steps carefully:
+
+#### 1️⃣ Download Files
+
+* Open the Google Drive link
+* Download all folders (`data`, `model`, optional `heatmaps`)
+
+---
+
+#### 2️⃣ Extract Files
+
+If downloaded as ZIP:
+
+```bash
+Extract all files before using
+```
+
+---
+
+#### 3️⃣ Place Files in Project
+
+Ensure the structure matches exactly:
+
+```bash
+neuroage-xai-lab/
+│
+├── data/
+│   ├── oasis/
+│   └── processed/
+│
+├── backend/
+│   └── model/
+│       └── model.pth
+```
+
+---
+
+#### 4️⃣ Verify Setup
+
+Run:
+
+```bash
+python backend/check_setup.py
+```
+
+Expected:
+
+```bash
+✔ Dataset found
+✔ Model loaded successfully
+✔ Environment ready
+```
+
+---
+
+### ⚠️ Important Notes
+
+* Do NOT rename folders
+* Do NOT change file locations
+* Model must be inside `backend/model/`
+* Backend server must be running before testing
+
+---
+
+### 🧪 Quick Validation
+
+After setup:
+
+```bash
+python backend/test_api.py
+```
+
+Expected result:
+
+```bash
+[PASS] Health Check
+[PASS] Model Info
+[PASS] Single Prediction
+[PASS] Batch Prediction
+```
+
+---
+
+### 🔐 Access Issues
+
+If you cannot access the Drive link:
+
+* Ensure link is set to: **Anyone with the link → Viewer**
+* Try opening in incognito mode
+* Check internet/firewall restrictions
+
+---
+
+### 💡 Pro Tip
+
+For faster setup:
+
+* Download as ZIP
+* Extract locally
+* Then place into project folders
+
+---
+
+### 🎯 Summary
+
+```bash
+Download → Extract → Place → Run → Test → Done 🚀
+```
+
+---
+
 
 ## 🚀 Quick Start (5 minutes)
 
