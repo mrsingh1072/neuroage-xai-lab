@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # Brain Age Prediction API Service
+  brain-age-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: brain-age-api
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./backend/heatmaps:/app/heatmaps
+      - ./backend.log:/app/backend.log
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - brain-age-network
+
+networks:
+  brain-age-network:
+    driver: bridge
+
+volumes:
+  uploads:
+  heatmaps:
+
+# Optional: Add PostgreSQL for storing predictions
+# services:
+#   postgres:
+#     image: postgres:15-alpine
+#     container_name: brain-age-db
+#     environment:
+#       POSTGRES_USER: admin
+#       POSTGRES_PASSWORD: secure_password
+#       POSTGRES_DB: brainages
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     networks:
+#       - brain-age-network
+#
+# volumes:
+#   postgres_data:
