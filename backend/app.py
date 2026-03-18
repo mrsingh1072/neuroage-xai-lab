@@ -5,7 +5,8 @@ Flask application for serving brain age predictions using CNN models on MRI imag
 Title: Explainable Brain Age Prediction and Comparative Analysis Using CNN and Vision Transformer Models
 Author: NeuroAge XAI Lab
 """
-
+from vit_model import load_vit_model, predict_vit
+from flask_cors import CORS
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 import logging
@@ -24,7 +25,7 @@ from explainability import ExplainabilityEngine
 
 # Create Flask app
 app = Flask(__name__)
-
+CORS(app)
 # Configuration variables
 BASE_DIR = Path(__file__).parent.parent  # Project root
 BACKEND_DIR = Path(__file__).parent  # Backend directory
@@ -75,6 +76,14 @@ except Exception as e:
     device = None
 
 # Initialize explainability engine
+# vit_model=None
+# Initialize ViT model
+try:
+    vit_model_instance = load_vit_model()
+    logger.info("ViT model loaded successfully")
+except Exception as e:
+    logger.error(f"Failed to load ViT model: {str(e)}")
+    vit_model_instance = None
 try:
     if model is not None:
         explainability_engine = ExplainabilityEngine(model, device, HEATMAP_FOLDER)
@@ -336,6 +345,56 @@ def predict():
     
     return jsonify(response_data), 200
 
+@app.route('/predict-vit', methods=['POST'])
+def predict_vit_route():
+
+    if vit_model_instance is None:
+        return jsonify({
+            "status": "error",
+            "error": "ViT model not loaded"
+        }), 500
+
+    image_bytes, error = get_image_from_request(request)
+    if error:
+        return jsonify({
+            "status": "error",
+            "error": error
+        }), 400
+
+    try:
+        image_tensor = ImagePreprocessor.preprocess_from_bytes(image_bytes)
+
+        # ✅ FIX 1: convert grayscale → RGB
+        image_tensor = image_tensor.repeat(1, 3, 1, 1)
+
+        # ✅ FIX 2: ensure float
+        image_tensor = image_tensor.float()
+
+        # ✅ FIX 3: move to correct device
+        device = next(vit_model_instance.parameters()).device
+        image_tensor = image_tensor.to(device)
+
+        # ✅ prediction
+        age = predict_vit(vit_model_instance, image_tensor)
+
+        return jsonify({
+            "status": "success",
+            "predicted_age": float(age)
+        })
+
+    except Exception as e:
+        import traceback
+
+        print("\n🔥🔥🔥 VIT FULL ERROR 🔥🔥🔥")
+        traceback.print_exc()   # ✅ FULL ERROR
+
+        return jsonify({
+            "status": "error",
+            "error": str(e)
+        }), 500
+
+     
+  
 
 @app.route('/predict/batch', methods=['POST'])
 def predict_batch():

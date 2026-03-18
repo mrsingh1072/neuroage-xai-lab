@@ -1,0 +1,199 @@
+<!doctype html>
+<html>
+<head>
+  <title>Brain Age Predictor</title>
+
+  <style>
+    body {
+      font-family: monospace;
+      font-size: 1.2em;
+      background: #759ff3;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .main {
+      background: #ffffffcc;
+      padding: 25px;
+      border-radius: 12px;
+      width: 800px;
+      box-shadow: 0px 4px 20px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .grid {
+      display: flex;
+      gap: 20px;
+    }
+
+    .card {
+      flex: 1;
+      background: #c5d4f3;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #4b77be;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #365a91;
+    }
+
+    .result-box {
+      margin-top: 15px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .age {
+      font-size: 26px;
+      font-weight: bold;
+      white-space: pre-line;
+    }
+
+    .confidence {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .loading {
+      margin-top: 10px;
+      color: blue;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="main">
+  <h1> Brain Age Predictor</h1>
+
+  <div class="grid">
+
+    <!-- LEFT -->
+    <div class="card">
+      <h3>1. Select MRI Image</h3>
+      <input type="file" id="imageInput" />
+
+      <button type="button" onclick="predictBoth()">Predict (CNN vs ViT)</button>
+
+      <p id="loading" class="loading"></p>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="card">
+      <h3>2. Result</h3>
+
+      <div class="result-box" id="resultBox">
+        <div id="age" class="age"></div>
+        <p id="confidence" class="confidence"></p>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+console.log("JS Loaded ✅");
+
+async function predictBoth() {
+
+    console.log("Button clicked ✅");
+
+    const file = document.getElementById("imageInput").files[0];
+
+    if (!file) {
+        alert("Please select an image!");
+        return;
+    }
+
+    const loading = document.getElementById("loading");
+    const resultBox = document.getElementById("resultBox");
+
+    loading.innerText = "Processing...";
+    resultBox.style.display = "none";
+
+    try {
+        // 🔹 CNN CALL
+        let formData1 = new FormData();
+        formData1.append("image", file);
+
+        let cnnRes = await fetch("http://127.0.0.1:5000/predict", {
+            method: "POST",
+            body: formData1
+        });
+
+        let cnnData = await cnnRes.json();
+        console.log("CNN:", cnnData);
+
+        // 🔹 ViT CALL (safe)
+        let vitAge = "N/A";
+
+        try {
+            let formData2 = new FormData();
+            formData2.append("image", file);
+
+            let vitRes = await fetch("http://127.0.0.1:5000/predict-vit", {
+                method: "POST",
+                body: formData2
+            });
+
+            if (vitRes.ok) {
+                let vitData = await vitRes.json();
+                console.log("ViT:", vitData);
+
+                if (vitData.status === "success") {
+                    vitAge = Math.round(vitData.predicted_age);
+                }
+            }
+        } catch (vitErr) {
+            console.log("ViT not available:", vitErr);
+        }
+
+        loading.innerText = "";
+
+        // 🔹 DISPLAY RESULT
+        if (cnnData.status === "success") {
+
+            let cnnAge = Math.round(cnnData.predicted_age);
+
+            document.getElementById("age").innerText =
+                "CNN: " + cnnAge + " yrs\n" +
+                "ViT: " + vitAge + " yrs";
+
+            document.getElementById("confidence").innerText =
+                "CNN Confidence: " + cnnData.explanation.confidence.level;
+
+            resultBox.style.display = "block";
+
+        } else {
+            alert("Prediction failed");
+        }
+
+    } catch (err) {
+        console.error("ERROR:", err);
+        loading.innerText = "";
+        alert("Server connection error!");
+    }
+}
+</script>
+
+</body>
+</html>
