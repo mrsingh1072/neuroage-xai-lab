@@ -75,15 +75,32 @@ except Exception as e:
     model = None
     device = None
 
-# Initialize explainability engine
-# vit_model=None
-# Initialize ViT model
+# Initialize ViT model with proper error handling
+vit_model_instance = None
+vit_device = None
+vit_status = "not_available"
+vit_message = "ViT model not loaded"
+
 try:
-    vit_model_instance = load_vit_model()
-    logger.info("ViT model loaded successfully")
+    logger.info("Attempting to load ViT model...")
+    vit_result = load_vit_model()
+    
+    if vit_result['status'] == 'success' or vit_result['status'] == 'untrained':
+        vit_model_instance = vit_result['model']
+        vit_device = vit_result['device']
+        vit_status = vit_result['status']
+        vit_message = vit_result['message']
+        logger.info(f"✅ ViT model initialized: {vit_message}")
+    else:
+        logger.warning(f"ViT model initialization failed: {vit_result['message']}")
+        vit_status = 'error'
+        vit_message = vit_result['message']
 except Exception as e:
-    logger.error(f"Failed to load ViT model: {str(e)}")
-    vit_model_instance = None
+    logger.error(f"Failed to initialize ViT model: {str(e)}")
+    vit_status = 'error'
+    vit_message = str(e)
+
+# Initialize explainability engine
 try:
     if model is not None:
         explainability_engine = ExplainabilityEngine(model, device, HEATMAP_FOLDER)
@@ -190,13 +207,13 @@ def health_check():
 @app.route('/predict', methods=['POST'])
 def predict():
     """
-    Main prediction endpoint.
+    Main prediction endpoint - returns both CNN and ViT predictions.
     
     Accepts:
         - Image file (MRI scan)
     
     Returns:
-        JSON: Predicted brain age and metadata
+        JSON: Predicted brain ages from both CNN and ViT models
     
     Example:
         curl -X POST -F "image=@mri_scan.png" http://localhost:5000/predict
@@ -207,11 +224,11 @@ def predict():
     logger.info(f"Request time: {datetime.now().isoformat()}")
     
     # ========================================================================
-    # Step 1: Validate Model
+    # Step 1: Validate CNN Model
     # ========================================================================
     
     if model is None or device is None:
-        error_msg = "Model not loaded. Cannot process prediction."
+        error_msg = "CNN model not loaded. Cannot process prediction."
         logger.error(error_msg)
         return jsonify({
             "error": error_msg,
@@ -230,7 +247,7 @@ def predict():
             "status": "error"
         }), 400  # Bad Request
     
-    # Log filename for request tracking (helps identify issues with specific images)
+    # Log filename for request tracking
     filename = request.files['image'].filename if 'image' in request.files else 'unknown'
     logger.info(f"Processing image file: {filename} ({len(image_bytes)} bytes)")
     
@@ -253,38 +270,85 @@ def predict():
         }), 400
     
     # ========================================================================
-    # Step 4: Run Model Prediction
+    # Step 4: Run CNN Prediction
     # ========================================================================
     
+    cnn_result = {
+        "predicted_age": None,
+        "confidence": "unknown",
+        "status": "failed"
+    }
+    
     try:
-        logger.info("Running model inference...")
-        predicted_age = PredictionEngine.predict_age(
+        logger.info("Running CNN model inference...")
+        cnn_predicted_age = PredictionEngine.predict_age(
             model=model,
             image_tensor=image_tensor,
             device=device,
             min_age=20,
             max_age=90
         )
-        logger.info(f"Prediction successful: {predicted_age} years")
+        logger.info(f"CNN prediction successful: {cnn_predicted_age} years")
+        cnn_result["predicted_age"] = round(cnn_predicted_age, 1)
+        cnn_result["status"] = "success"
+        cnn_result["confidence"] = "high"  # Default confidence
         
     except Exception as e:
-        error_msg = f"Model prediction failed: {str(e)}"
+        error_msg = f"CNN prediction failed: {str(e)}"
         logger.error(error_msg)
-        return jsonify({
-            "error": error_msg,
-            "status": "error"
-        }), 500  # Internal Server Error
+        cnn_result["status"] = "failed"
+        cnn_result["error"] = str(e)
     
     # ========================================================================
-    # Step 5: Generate Explanation with Grad-CAM Heatmap
+    # Step 5: Run ViT Prediction (optional, non-blocking)
+    # ========================================================================
+    
+    vit_result = {
+        "predicted_age": None,
+        "confidence": "unknown",
+        "status": "not_available"
+    }
+    
+    if vit_model_instance is not None:
+        try:
+            logger.info("Running ViT model inference...")
+            
+            # Convert grayscale to RGB for ViT
+            image_tensor_vit = image_tensor.clone()
+            if image_tensor_vit.shape[1] == 1:
+                image_tensor_vit = image_tensor_vit.repeat(1, 3, 1, 1)
+            
+            vit_age, vit_confidence = predict_vit(
+                model=vit_model_instance,
+                image_tensor=image_tensor_vit,
+                device=vit_device,
+                min_age=20,
+                max_age=90
+            )
+            
+            logger.info(f"ViT prediction successful: {vit_age} years (confidence: {vit_confidence})")
+            vit_result["predicted_age"] = round(vit_age, 1)
+            vit_result["status"] = "success"
+            vit_result["confidence"] = vit_confidence
+            
+        except Exception as e:
+            logger.error(f"ViT prediction failed: {str(e)}")
+            vit_result["status"] = "failed"
+            vit_result["error"] = str(e)
+    else:
+        logger.warning(f"ViT model not available. Status: {vit_status}")
+        vit_result["status"] = "not_available"
+        vit_result["message"] = vit_message
+    
+    # ========================================================================
+    # Step 6: Generate Explanation with Grad-CAM Heatmap (CNN only)
     # ========================================================================
     
     explanation = None
     try:
-        if explainability_engine:
+        if explainability_engine and cnn_result["status"] == "success":
             logger.info("Generating explanation with Grad-CAM...")
             logger.debug(f"Input image tensor shape: {image_tensor.shape}")
-            logger.info(f"Using Grad-CAM on layer: {explainability_engine.gradcam.last_conv_layer}")
             
             # Get raw model output for confidence scoring
             raw_output = PredictionEngine.predict(model, image_tensor, device)
@@ -294,65 +358,84 @@ def predict():
             original_image = image_tensor[0, 0].cpu().numpy()
             if original_image.max() > 1:
                 original_image = original_image / 255.0
-            logger.debug(f"Original image shape: {original_image.shape}, range: [{original_image.min():.4f}, {original_image.max():.4f}]")
+            logger.debug(f"Original image shape: {original_image.shape}")
             
-            # Generate complete explanation with Grad-CAM heatmap
-            logger.info("Calling explain_prediction with save_visualization=True")
+            # Generate explanation
             explanation = explainability_engine.explain_prediction(
                 image_tensor=image_tensor,
-                predicted_age=predicted_age,
+                predicted_age=cnn_result["predicted_age"],
                 model_output=raw_output,
                 original_image=original_image,
                 save_visualization=True
             )
             
             if explanation:
-                logger.info(f"Explanation generated successfully. Keys: {explanation.keys() if isinstance(explanation, dict) else 'N/A'}")
-                if "visualization_path" in explanation or "heatmap_path" in explanation:
-                    heatmap_key = "visualization_path" if "visualization_path" in explanation else "heatmap_path"
-                    logger.info(f"Heatmap/Visualization path: {explanation.get(heatmap_key)}")
+                logger.info(f"Explanation generated successfully")
             else:
-                logger.warning("explain_prediction returned None or empty explanation")
+                logger.warning("explain_prediction returned None")
         else:
-            logger.warning("Explainability engine is not initialized")
+            logger.warning("Explainability engine unavailable or CNN prediction failed")
     except Exception as e:
         logger.error(f"Explanation generation failed: {str(e)}", exc_info=True)
         explanation = None
     
     # ========================================================================
-    # Step 6: Build Response
+    # Step 7: Build Unified Response
     # ========================================================================
     
+    # Calculate difference if both models succeeded
+    difference = None
+    if cnn_result["status"] == "success" and vit_result["status"] == "success":
+        difference = abs(cnn_result["predicted_age"] - vit_result["predicted_age"])
+    
     response_data = {
-        "predicted_age": round(predicted_age, 1),
-        "predicted_age_int": int(predicted_age),
-        "status": "success",
-        "timestamp": datetime.now().isoformat()
+        "status": "success" if cnn_result["status"] == "success" else "partial",
+        "timestamp": datetime.now().isoformat(),
+        "cnn": cnn_result,
+        "vit": vit_result,
+        "comparison": {
+            "difference": round(difference, 1) if difference is not None else None,
+            "better_confidence": None
+        }
     }
     
-    # Add explanation if generated
+    # Determine which model has better confidence
+    if cnn_result["status"] == "success" and vit_result["status"] == "success":
+        confidence_order = {'high': 3, 'medium': 2, 'low': 1, 'unknown': 0}
+        cnn_conf = confidence_order.get(cnn_result.get("confidence", "unknown"), 0)
+        vit_conf = confidence_order.get(vit_result.get("confidence", "unknown"), 0)
+        
+        if cnn_conf > vit_conf:
+            response_data["comparison"]["better_confidence"] = "cnn"
+        elif vit_conf > cnn_conf:
+            response_data["comparison"]["better_confidence"] = "vit"
+        else:
+            response_data["comparison"]["better_confidence"] = "equal"
+    
+    # Add explanation if available
     if explanation:
         response_data["explanation"] = explanation
-    else:
-        # Fallback explanation without heatmap
-        response_data["explanation"] = {
-            "predicted_age": predicted_age,
-            "message": "Prediction completed. Heatmap generation skipped."
-        }
     
-    logger.info(f"Prediction response prepared. Predicted age: {predicted_age:.1f} years")
+    logger.info(f"Unified response prepared: CNN={cnn_result['status']}, ViT={vit_result['status']}")
     logger.info("=== END PREDICTION REQUEST ===\n")
     
     return jsonify(response_data), 200
 
+
 @app.route('/predict-vit', methods=['POST'])
 def predict_vit_route():
-
+    """
+    Deprecated: Use /predict instead for both CNN and ViT predictions.
+    This endpoint is kept for backward compatibility.
+    """
+    logger.warning("Deprecated endpoint /predict-vit called. Use /predict instead.")
+    
     if vit_model_instance is None:
         return jsonify({
-            "status": "error",
-            "error": "ViT model not loaded"
-        }), 500
+            "status": vit_status,
+            "message": vit_message,
+            "error": "ViT model not available"
+        }), 503
 
     image_bytes, error = get_image_from_request(request)
     if error:
@@ -363,38 +446,31 @@ def predict_vit_route():
 
     try:
         image_tensor = ImagePreprocessor.preprocess_from_bytes(image_bytes)
-
-        # ✅ FIX 1: convert grayscale → RGB
-        image_tensor = image_tensor.repeat(1, 3, 1, 1)
-
-        # ✅ FIX 2: ensure float
-        image_tensor = image_tensor.float()
-
-        # ✅ FIX 3: move to correct device
-        device = next(vit_model_instance.parameters()).device
-        image_tensor = image_tensor.to(device)
-
-        # ✅ prediction
-        age = predict_vit(vit_model_instance, image_tensor)
+        
+        # Convert grayscale to RGB for ViT
+        image_tensor = image_tensor.repeat(1, 3, 1, 1).float()
+        
+        # Run ViT prediction
+        vit_age, vit_confidence = predict_vit(
+            model=vit_model_instance,
+            image_tensor=image_tensor,
+            device=vit_device,
+            min_age=20,
+            max_age=90
+        )
 
         return jsonify({
             "status": "success",
-            "predicted_age": float(age)
-        })
+            "predicted_age": round(vit_age, 1),
+            "confidence": vit_confidence
+        }), 200
 
     except Exception as e:
-        import traceback
-
-        print("\n🔥🔥🔥 VIT FULL ERROR 🔥🔥🔥")
-        traceback.print_exc()   # ✅ FULL ERROR
-
+        logger.error(f"ViT prediction error: {str(e)}", exc_info=True)
         return jsonify({
             "status": "error",
             "error": str(e)
         }), 500
-
-     
-  
 
 @app.route('/predict/batch', methods=['POST'])
 def predict_batch():
