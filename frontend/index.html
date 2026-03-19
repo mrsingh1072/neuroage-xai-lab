@@ -242,6 +242,182 @@
     .error-box.visible {
       display: block;
     }
+
+    /* Heatmap Visualization Section */
+    .heatmap-section {
+      background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+      padding: 25px;
+      border-radius: 12px;
+      margin-top: 25px;
+      border: 2px solid #c5d3e0;
+      display: none;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .heatmap-section.visible {
+      display: block;
+    }
+
+    .heatmap-section h3 {
+      margin-top: 0;
+      color: #333;
+      font-size: 1.2em;
+      margin-bottom: 20px;
+    }
+
+    .heatmap-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+
+    .heatmap-item {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .heatmap-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .heatmap-item-title {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 12px;
+      font-size: 0.95em;
+    }
+
+    .heatmap-item img {
+      max-width: 100%;
+      height: auto;
+      max-height: 350px;
+      border-radius: 8px;
+      border: 2px solid #e0e0e0;
+      display: block;
+    }
+
+    .heatmap-item.unavailable {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      background: #f5f5f5;
+      color: #999;
+      font-style: italic;
+    }
+
+    /* Details Panel */
+    .details-panel {
+      background: white;
+      padding: 18px;
+      border-radius: 10px;
+      border-left: 4px solid #667eea;
+      margin-bottom: 20px;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .detail-item {
+      background: #f9f9f9;
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 3px solid #667eea;
+    }
+
+    .detail-label {
+      font-size: 0.85em;
+      color: #666;
+      margin-bottom: 5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .detail-value {
+      font-size: 1.1em;
+      color: #333;
+      font-weight: bold;
+    }
+
+    .explanation-text {
+      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #5c6bc0;
+      margin-top: 15px;
+      font-size: 0.9em;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    /* Color Legend */
+    .color-legend {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      border-top: 4px solid #667eea;
+      margin-top: 20px;
+    }
+
+    .color-legend h4 {
+      margin: 0 0 12px 0;
+      color: #333;
+      font-size: 0.95em;
+    }
+
+    .legend-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9em;
+    }
+
+    .legend-color {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .legend-color.high {
+      background: linear-gradient(135deg, #ff0000 0%, #ff4444 100%);
+    }
+
+    .legend-color.medium {
+      background: linear-gradient(135deg, #ffff00 0%, #ffdd44 100%);
+    }
+
+    .legend-color.low {
+      background: linear-gradient(135deg, #0000ff 0%, #4444ff 100%);
+    }
+
+    @media (max-width: 768px) {
+      .heatmap-gallery {
+        grid-template-columns: 1fr;
+      }
+
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 
@@ -291,10 +467,59 @@
     </div>
 
   </div>
+
+  <!-- Heatmap Visualization Section -->
+  <div class="heatmap-section" id="heatmapSection">
+    <h3>Explainability (Grad-CAM Heatmap)</h3>
+    
+    <!-- Heatmap Gallery -->
+    <div class="heatmap-gallery" id="heatmapGallery"></div>
+
+    <!-- Details Panel -->
+    <div class="details-panel" id="detailsPanel">
+      <div class="details-grid" id="detailsGrid"></div>
+      <div class="explanation-text">
+        Red areas indicate high importance to the model's prediction. Yellow areas indicate medium importance, and blue areas indicate low importance. Darker colors represent stronger signals from the model.
+      </div>
+    </div>
+
+    <!-- Color Legend -->
+    <div class="color-legend">
+      <h4>Importance Scale</h4>
+      <div class="legend-items">
+        <div class="legend-item">
+          <div class="legend-color high"></div>
+          <span>High Importance</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color medium"></div>
+          <span>Medium Importance</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color low"></div>
+          <span>Low Importance</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
 console.log("Frontend loaded");
+
+// Debug: Check backend connectivity on page load
+fetch("http://127.0.0.1:5000/debug/heatmaps")
+    .then(response => response.json())
+    .then(data => {
+        console.log("✓ Backend heatmap debug info:", data);
+        if (data.heatmap_count > 0) {
+            console.log(`  Found ${data.heatmap_count} heatmap files`);
+        }
+    })
+    .catch(err => {
+        console.warn("⚠ Could not reach backend debug endpoint. Backend may not be started.", err.message);
+    });
 
 async function predictBoth() {
     console.log("Predict button clicked");
@@ -325,7 +550,9 @@ async function predictBoth() {
         });
 
         let data = await response.json();
-        console.log("Full Response:", data);
+        console.log("Full API Response:", data);
+        console.log("Response keys:", Object.keys(data));
+        console.log("Explanation data:", data.explanation);
 
         loading.innerText = "";
 
@@ -345,6 +572,8 @@ async function predictBoth() {
 }
 
 function displayResults(data) {
+    console.log("displayResults called with data:", data);
+    
     // Display CNN Result
     const cnnData = data.cnn || {};
     const cnnAge = document.getElementById("cnnAge");
@@ -404,6 +633,231 @@ function displayResults(data) {
     } else {
         comparisonSection.classList.remove("visible");
     }
+
+    // Display Heatmaps
+    console.log("About to call displayHeatmaps with cnnData:", cnnData, "vitData:", vitData);
+    displayHeatmaps(data, cnnData, vitData);
+}
+
+function displayHeatmaps(data, cnnData, vitData) {
+    const heatmapSection = document.getElementById("heatmapSection");
+    const heatmapGallery = document.getElementById("heatmapGallery");
+    const detailsPanel = document.getElementById("detailsPanel");
+    const detailsGrid = document.getElementById("detailsGrid");
+    
+    heatmapGallery.innerHTML = "";
+    detailsGrid.innerHTML = "";
+    
+    let hasGradcam = false;
+    let modelUsed = "";
+    let predictedAge = "-";
+    let confidenceScore = "-";
+
+    // Check for explanation in response (at root level)
+    const explanation = data.explanation;
+    
+    if (explanation) {
+        console.log("Explanation data found:", explanation);
+        hasGradcam = true;
+        
+        // Use CNN data for model info (explanation is typically from CNN)
+        if (cnnData.status === "success") {
+            modelUsed = "CNN (Convolutional Neural Network)";
+            predictedAge = cnnData.predicted_age;
+            confidenceScore = cnnData.confidence || "unknown";
+        }
+        
+        displayModelHeatmap(explanation, heatmapGallery);
+    } else {
+        console.log("No explanation data in response");
+    }
+
+    // If we have Grad-CAM data, populate the details panel
+    if (hasGradcam) {
+        populateDetailsPanel(detailsGrid, modelUsed, predictedAge, confidenceScore);
+        heatmapSection.classList.add("visible");
+    } else {
+        heatmapSection.classList.remove("visible");
+    }
+}
+
+function extractFilenameFromPath(fullPath) {
+    // Handle both Windows and Unix paths
+    // Extract just the filename from either absolute or relative path
+    if (!fullPath) return null;
+    
+    // Remove URL protocol if present
+    let path = fullPath.replace(/^http:\/\/[^\/]+\//, '');
+    
+    // Extract filename from path (handles both \ and /)
+    let filename = path.split(/[\\/]/).pop();
+    return filename;
+}
+
+function convertToRelativePath(fullPath) {
+    // Convert any path to relative format for API serving
+    if (!fullPath) return null;
+    
+    // If already a relative path starting with 'heatmap/', return as-is
+    if (fullPath.startsWith('heatmap/')) return fullPath;
+    
+    // Extract filename
+    let filename = extractFilenameFromPath(fullPath);
+    if (!filename) return null;
+    
+    // Return as relative path (use new /heatmap/ endpoint)
+    return `heatmap/${filename}`;
+}
+
+function displayModelHeatmap(explanation, container) {
+    const heatmapData = explanation || {};
+    
+    console.log("Displaying heatmap with data:", heatmapData);
+    
+    // Check for visualization paths (backend returns visualization_path)
+    let hasVisualization = heatmapData.visualization_path;
+    
+    // Also check for individual heatmap paths (if available)
+    const hasOverlay = heatmapData.overlay_heatmap_path;
+    const hasRaw = heatmapData.raw_heatmap_path;
+    const hasOriginal = heatmapData.original_image_path;
+
+    console.log("Raw image paths:", {
+        visualization: hasVisualization,
+        original: hasOriginal,
+        raw: hasRaw,
+        overlay: hasOverlay
+    });
+
+    // Priority 1: Display consolidated visualization (if available)
+    if (hasVisualization) {
+        // Convert absolute path to relative path if needed
+        let relativePath = convertToRelativePath(hasVisualization);
+        console.log("Converted visualization path:", hasVisualization, "->", relativePath);
+        
+        if (relativePath) {
+            const imageUrl = `http://127.0.0.1:5000/${relativePath}`;
+            console.log("✓ Final image URL:", imageUrl);
+            container.innerHTML += createHeatmapItem(
+                "Grad-CAM Heatmap Visualization",
+                imageUrl
+            );
+        }
+    }
+
+    // Priority 2: Display individual images if available
+    // Display Original Image
+    if (hasOriginal && !hasVisualization) {
+        let relativePath = convertToRelativePath(hasOriginal);
+        if (relativePath) {
+            const imageUrl = `http://127.0.0.1:5000/${relativePath}`;
+            console.log("Loading original image from:", imageUrl);
+            container.innerHTML += createHeatmapItem(
+                "Original MRI Image",
+                imageUrl
+            );
+        }
+    }
+
+    // Display Raw Heatmap
+    if (hasRaw && !hasVisualization) {
+        let relativePath = convertToRelativePath(hasRaw);
+        if (relativePath) {
+            const imageUrl = `http://127.0.0.1:5000/${relativePath}`;
+            console.log("Loading raw heatmap from:", imageUrl);
+            container.innerHTML += createHeatmapItem(
+                "Raw Heatmap",
+                imageUrl
+            );
+        }
+    }
+
+    // Display Overlay Heatmap
+    if (hasOverlay && !hasVisualization) {
+        let relativePath = convertToRelativePath(hasOverlay);
+        if (relativePath) {
+            const imageUrl = `http://127.0.0.1:5000/${relativePath}`;
+            console.log("Loading overlay heatmap from:", imageUrl);
+            container.innerHTML += createHeatmapItem(
+                "Overlay Heatmap",
+                imageUrl
+            );
+        }
+    }
+
+    // If no images available, show message
+    if (!hasVisualization && !hasOriginal && !hasRaw && !hasOverlay) {
+        console.warn("No heatmap images available");
+        container.innerHTML += `<div class="heatmap-item unavailable">Heatmap not available</div>`;
+    }
+    
+    // Attach event listeners to all newly added images
+    attachImageEventListeners();
+}
+
+function createHeatmapItem(title, imageUrl) {
+    // Create a safe id for this image element
+    const itemId = `heatmap-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Return clean HTML without inline JavaScript
+    return `
+        <div class="heatmap-item" id="${itemId}" data-image-url="${imageUrl}">
+            <div class="heatmap-item-title">${title}</div>
+            <img src="${imageUrl}" alt="${title}" data-item-id="${itemId}">
+        </div>
+    `;
+}
+
+function attachImageEventListeners() {
+    // Find all unprocessed images and attach proper event handlers
+    document.querySelectorAll('img[data-item-id]:not([data-processed])').forEach(img => {
+        // Mark as processed
+        img.setAttribute('data-processed', 'true');
+        
+        // Success handler
+        img.onload = function() {
+            console.log('✓ Heatmap loaded:', this.src);
+        };
+        
+        // Error handler
+        img.onerror = function() {
+            console.error('✗ Failed to load heatmap:', this.src);
+            const itemId = this.getAttribute('data-item-id');
+            const container = document.getElementById(itemId);
+            if (container) {
+                container.innerHTML = `
+                    <div style="padding: 20px; color: #999; text-align: center; background: #f5f5f5; border-radius: 8px;">
+                        <p><strong>Failed to load heatmap</strong></p>
+                        <p style="font-size: 0.85em; word-break: break-all; margin: 10px 0 0 0;">${this.src}</p>
+                    </div>
+                `;
+            }
+            this.style.display = 'none';
+        };
+    });
+}
+
+function populateDetailsPanel(container, modelUsed, predictedAge, confidenceScore) {
+    console.log("Populating details panel:", { modelUsed, predictedAge, confidenceScore });
+    
+    container.innerHTML = `
+        <div class="detail-item">
+            <div class="detail-label">Model</div>
+            <div class="detail-value">${modelUsed}</div>
+        </div>
+        <div class="detail-item">
+            <div class="detail-label">Predicted Age</div>
+            <div class="detail-value">${predictedAge} years</div>
+        </div>
+        <div class="detail-item">
+            <div class="detail-label">Confidence</div>
+            <div class="detail-value"><span class="confidence-badge ${confidenceScore}">${confidenceScore}</span></div>
+        </div>
+        <div class="detail-item">
+            <div class="detail-label">Explanation Method</div>
+            <div class="detail-value">Grad-CAM</div>
+        </div>
+    `;
 }
 
 function showError(message) {

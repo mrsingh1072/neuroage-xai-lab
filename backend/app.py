@@ -7,7 +7,7 @@ Author: NeuroAge XAI Lab
 """
 from vit_model import load_vit_model, predict_vit
 from flask_cors import CORS
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file, Response, send_from_directory
 from werkzeug.utils import secure_filename
 import logging
 import os
@@ -23,10 +23,7 @@ from explainability import ExplainabilityEngine
 # Configuration
 # ============================================================================
 
-# Create Flask app
-app = Flask(__name__)
-CORS(app)
-# Configuration variables
+# Configuration variables - MUST BE BEFORE FLASK APP
 BASE_DIR = Path(__file__).parent.parent  # Project root
 BACKEND_DIR = Path(__file__).parent  # Backend directory
 MODEL_PATH = os.path.join(BACKEND_DIR, "model", "model.pth")
@@ -34,6 +31,10 @@ UPLOAD_FOLDER = os.path.join(BACKEND_DIR, "uploads")
 HEATMAP_FOLDER = os.path.join(BACKEND_DIR, "heatmaps")
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+
+# Create Flask app
+app = Flask(__name__)
+CORS(app)
 
 # Flask configuration
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -202,6 +203,63 @@ def health_check():
     }
     
     return jsonify(status_info), 200
+
+
+@app.route('/debug/heatmaps', methods=['GET'])
+def debug_heatmaps():
+    """
+    Debug endpoint to list available heatmaps and check system status.
+    
+    Returns:
+        JSON: List of heatmap files and folder info
+    """
+    try:
+        heatmap_files = []
+        if os.path.exists(HEATMAP_FOLDER):
+            heatmap_files = os.listdir(HEATMAP_FOLDER)
+        
+        return jsonify({
+            "status": "ok",
+            "message": "Heatmap folder is accessible"
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e)
+        }), 500
+
+
+@app.route('/heatmap/<filename>', methods=['GET'])
+def serve_heatmap(filename):
+    """
+    Serve heatmap image files from the heatmaps folder.
+    
+    Uses Flask's send_from_directory for safe and efficient file serving.
+    
+    Args:
+        filename: Name of the heatmap file to serve (e.g., pred_21yr_comparison_abc123.png)
+        
+    Returns:
+        PNG image file or 404 if not found
+    """
+    try:
+        # Security: Only allow safe filenames
+        if not all(c.isalnum() or c in '._-' for c in filename):
+            logger.warning(f"Security: Invalid filename requested: {filename}")
+            return jsonify({"error": "Invalid filename"}), 400
+        
+        logger.info(f"Serving heatmap: {filename}")
+        
+        # Use Flask's safe send_from_directory
+        return send_from_directory(HEATMAP_FOLDER, filename, mimetype='image/png')
+    
+    except FileNotFoundError:
+        logger.warning(f"Heatmap file not found: {filename}")
+        return jsonify({"error": "File not found"}), 404
+    except Exception as e:
+        logger.error(f"Error serving heatmap {filename}: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
 
 
 @app.route('/predict', methods=['POST'])

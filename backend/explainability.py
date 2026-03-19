@@ -719,7 +719,7 @@ class ExplainabilityEngine:
             suffix (str): Suffix to add before extension
             
         Returns:
-            Optional[str]: Path to saved file or None on error
+            Optional[str]: Relative path to saved file (e.g., "heatmaps/filename.png") or None on error
         """
         try:
             # Create filename with UUID to guarantee uniqueness
@@ -736,7 +736,12 @@ class ExplainabilityEngine:
             pil_image.save(filepath, 'PNG')
             
             logger.info(f"Visualization saved: {filepath}")
-            return filepath
+            
+            # Return relative path for Flask serving (heatmap/filename.png)
+            # Note: Using singular "heatmap" to match Flask route /heatmap/<filename>
+            relative_path = f"heatmap/{filename}"
+            logger.info(f"Returning relative path: {relative_path}")
+            return relative_path
         
         except Exception as e:
             logger.error(f"Failed to save visualization: {str(e)}")
