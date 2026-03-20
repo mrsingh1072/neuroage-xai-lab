@@ -2,14 +2,100 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply m-0 p-0 bg-gradient-hero text-white;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+}
+
+@layer components {
+  /* Glassmorphism */
+  .glass {
+    @apply backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl;
+  }
+
+  .glass-hover {
+    @apply glass transition-all duration-300 hover:bg-white/15 hover:border-white/30;
+  }
+
+  /* Gradient Button */
+  .btn-gradient {
+    @apply px-6 py-3 rounded-lg font-semibold text-white transition-all duration-300;
+    background: linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 50%, #06b6d4 100%);
+    background-size: 200% 200%;
+  }
+
+  .btn-gradient:hover {
+    background-position: 100% 100%;
+    @apply shadow-glow-lg;
+  }
+
+  .btn-gradient-sm {
+    @apply px-4 py-2 rounded-lg font-medium text-white text-sm transition-all duration-300;
+    background: linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 50%, #06b6d4 100%);
+    background-size: 200% 200%;
+  }
+
+  .btn-gradient-sm:hover {
+    background-position: 100% 100%;
+    @apply shadow-glow-md;
+  }
+
+  /* Premium Glow */
+  .glow-effect {
+    @apply shadow-glow-purple;
+  }
+
+  .glow-effect-blue {
+    @apply shadow-glow-sm;
+  }
+
+  .glow-effect-cyan {
+    @apply shadow-glow-cyan;
+  }
+
+  /* Text Gradients */
+  .text-gradient {
+    background: linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 50%, #ec4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-purple {
+    background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
 * {
   @apply transition-colors duration-300;
 }
 
-body {
-  @apply m-0 p-0;
-}
-
 html.dark {
   color-scheme: dark;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-600;
 }

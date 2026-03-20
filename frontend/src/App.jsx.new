@@ -1,0 +1,17 @@
+import { useState } from 'react';
+import Landing from './components/Landing';
+import Dashboard from './components/Dashboard';
+
+export default function App() {
+  const [currentPage, setCurrentPage] = useState('landing');
+
+  return (
+    <div className="w-full min-h-screen bg-gradient-hero">
+      {currentPage === 'landing' ? (
+        <Landing onNavigate={setCurrentPage} />
+      ) : (
+        <Dashboard onNavigate={setCurrentPage} />
+      )}
+    </div>
+  );
+}

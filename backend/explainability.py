@@ -737,9 +737,10 @@ class ExplainabilityEngine:
             
             logger.info(f"Visualization saved: {filepath}")
             
-            # Return relative path for Flask serving (heatmap/filename.png)
+            # Return relative path for Flask serving (/heatmap/filename.png)
             # Note: Using singular "heatmap" to match Flask route /heatmap/<filename>
-            relative_path = f"heatmap/{filename}"
+            # Include leading slash for proper URL construction
+            relative_path = f"/heatmap/{filename}"
             logger.info(f"Returning relative path: {relative_path}")
             return relative_path
         
