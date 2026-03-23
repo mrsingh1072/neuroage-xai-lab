@@ -1,5 +1,4 @@
 """
-
 Comprehensive End-to-End Integration Test for Grad-CAM Heatmap System
 Tests the full pipeline from image upload to heatmap retrieval and verification
 """
