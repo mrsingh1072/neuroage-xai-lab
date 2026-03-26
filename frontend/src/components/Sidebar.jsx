@@ -1,22 +1,50 @@
 import { motion } from 'framer-motion';
 import { Home, Upload, BarChart3, History, Settings, LogOut, Menu, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-export default function Sidebar({ isOpen, onToggle }) {
+export default function Sidebar({ isOpen, onToggle, onTabChange, activeTab }) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const menuItems = [
-    { icon: Home, label: 'Dashboard', id: 'dashboard' },
-    { icon: Upload, label: 'Upload MRI', id: 'upload' },
-    { icon: BarChart3, label: 'Results', id: 'results' },
-    { icon: History, label: 'History', id: 'history' },
-    { icon: Settings, label: 'Settings', id: 'settings' },
+    { icon: Home, label: 'Dashboard', id: 'dashboard', route: '/' },
+    { icon: Upload, label: 'Upload MRI', id: 'upload', route: '/upload' },
+    { icon: BarChart3, label: 'Results', id: 'results', route: '/results' },
+    { icon: History, label: 'History', id: 'history', route: '/history' },
+    { icon: Settings, label: 'Settings', id: 'settings', route: '/settings' },
   ];
+
+  const isActiveRoute = (item) => {
+    // If onTabChange callback exists, check against activeTab
+    if (onTabChange && activeTab) {
+      return item.id === activeTab;
+    }
+    // Otherwise check against route
+    return location.pathname === item.route;
+  };
 
   const handleLogout = () => {
     // Clear any auth tokens
     localStorage.removeItem('token');
     navigate('/');
+  };
+
+  const handleMenuClick = (item) => {
+    // If onTabChange callback exists (we're in Dashboard), use it for local state
+    if (onTabChange) {
+      if (item.id === 'dashboard') {
+        onTabChange('dashboard');
+      } else if (item.id === 'upload') {
+        onTabChange('upload');
+      }
+    } else {
+      // Otherwise use router navigation (for standalone pages like Upload.jsx)
+      if (item.id === 'dashboard') {
+        navigate('/');
+      } else if (item.id === 'upload') {
+        navigate('/upload');
+      }
+    }
   };
 
   return (
@@ -69,12 +97,7 @@ export default function Sidebar({ isOpen, onToggle }) {
                 paddingLeft: '24px',
               }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (item.id === 'dashboard') {
-                  // Stay on dashboard
-                }
-                // Future: Handle navigation to other sections
-              }}
+              onClick={() => handleMenuClick(item)}
               className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white transition-colors duration-300 group relative"
             >
               <item.icon
@@ -82,7 +105,7 @@ export default function Sidebar({ isOpen, onToggle }) {
                 className="text-cyan-400/60 group-hover:text-cyan-400 transition-colors"
               />
               <span className="text-sm font-medium">{item.label}</span>
-              {item.id === 'dashboard' && (
+              {isActiveRoute(item) && (
                 <motion.div
                   layoutId="activeNav"
                   className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-cyan-400 to-purple-600 rounded-r-lg"
