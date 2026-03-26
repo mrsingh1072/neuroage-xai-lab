@@ -1,3 +1,4 @@
+/* eslint-disable-next-line no-unused-vars */
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, Cloud, X } from 'lucide-react';
