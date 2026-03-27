@@ -3,8 +3,6 @@ import { motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import TopNavbar from './TopNavbar';
 
-
-
 export default function Upload() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [uploadedImage, setUploadedImage] = useState(null);
