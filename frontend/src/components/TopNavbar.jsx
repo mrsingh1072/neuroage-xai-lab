@@ -2,13 +2,6 @@ import { motion } from 'framer-motion';
 import { Bell, User, Moon, Sun, Menu } from 'lucide-react';
 import { useState } from 'react';
 
-
-
-
-
-
-
-
 export default function TopNavbar({ onMenuToggle }) {
   const [isDark, setIsDark] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
