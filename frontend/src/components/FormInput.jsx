@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+
+
 export default function FormInput({
   label,
   type = 'text',
