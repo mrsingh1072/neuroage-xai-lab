@@ -13,7 +13,6 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-
 # Import custom modules
 from model_loader import ModelLoader
 from utils import ImagePreprocessor, PredictionEngine
