@@ -63,11 +63,6 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # Global Components
 # ============================================================================
-
-
-
-
-
 # Initialize model loader
 try:
     model_loader = ModelLoader(MODEL_PATH)
