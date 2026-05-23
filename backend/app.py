@@ -65,10 +65,6 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # Initialize model loader
 try:
-
-
-
-    
     model_loader = ModelLoader(MODEL_PATH)
     model = model_loader.load_model()
     device = model_loader.get_device()
